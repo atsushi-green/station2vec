@@ -1,3 +1,5 @@
+from typing import final
+
 import matplotlib.pyplot as plt
 import torch
 from LandData import LandData
@@ -9,6 +11,7 @@ from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
 FONTNAME = "IPAexGothic"
 plt.rcParams["font.family"] = FONTNAME
+EMBEDDING_DIM: final = 2
 
 
 def main():
@@ -22,17 +25,23 @@ def main():
     data = dataset[0]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = VGAE(VariationalGraohAutoEncoder(in_channels=3, hidden_channels_list=[4], out_channels=3)).to(device)
+    model = VGAE(
+        VariationalGraohAutoEncoder(
+            in_channels=dataset.input_feature_dim, hidden_channels_list=[4], out_channels=EMBEDDING_DIM
+        )
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     for epoch in range(1, 1001):
         train(model, optimizer, data)
     model.eval()
     mu, std = model(data.x, data.edge_index)
+
     out = model.encode(data.x, data.edge_index)
 
     print(mu[:10])
     print(out[:10])
     station_df.to_csv("station.csv")
+
     draw_feature(out.detach().cpu().numpy(), station_df["駅名"].values, station_df["地価"].values)
 
 
@@ -67,14 +76,6 @@ def draw_feature(emb, label, color):
             print(pos)
         ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
     plt.show()
-
-
-def standrize(df):
-    df["経度"] = (df["経度"] - df["経度"].mean()) / df["経度"].std()
-    df["緯度"] = (df["緯度"] - df["緯度"].mean()) / df["緯度"].std()
-    df["乗降者数"] = (df["乗降者数"] - df["乗降者数"].mean()) / df["乗降者数"].std()
-    df["地価"] = (df["地価"] - df["地価"].mean()) / df["地価"].std()
-    return df
 
 
 if __name__ == "__main__":
