@@ -5,16 +5,13 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
-from LandData import LandData
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.transforms import NormalizeFeatures
 
 
 class StationData(InMemoryDataset):
-    def __init__(self, station_df: pd.DataFrame, edge_df: pd.DataFrame, land: LandData, standrize=True, transform=None):
+    def __init__(self, station_df: pd.DataFrame, edge_df: pd.DataFrame, standrize=True, transform=None):
         super().__init__(".", transform)
-        station_df["地価"] = [land.get_price(station_name) for station_name in station_df["駅名"].values]
-        # input_data = np.random.rand(len(station_df), 10)
 
         # 次数(エッジの数)を特徴量として追加する
         station_counter = Counter(edge_df["駅A"].tolist() + edge_df["駅B"].tolist())
@@ -22,6 +19,7 @@ class StationData(InMemoryDataset):
 
         # 乗降者数、地価、次数を特徴量として利用する
         input_data = station_df[["乗降者数", "地価", "急行", "次数"]].values
+        # input_data = station_df[["乗降者数", "地価"]].values
         self.input_feature_dim = input_data.shape[1]
 
         # random_values = np.random.rand(len(station_df), 10)
