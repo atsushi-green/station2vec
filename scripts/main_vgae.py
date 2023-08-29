@@ -2,7 +2,6 @@ from typing import final
 
 import matplotlib.pyplot as plt
 import torch
-from LandData import LandData
 from PathSetting import PathSetting
 from preprocess import make_station_dataframe
 from StationData import StationData
@@ -16,11 +15,10 @@ EMBEDDING_DIM: final = 2
 
 def main():
     ps = PathSetting()
-    land = LandData(ps.get_land_data_filenames())
     station_df, edge_df = make_station_dataframe(ps)
 
     # データ読み込み
-    dataset = StationData(station_df, edge_df, land, standrize=False)
+    dataset = StationData(station_df, edge_df, standrize=False)
     dataset.print_graph_info()
     data = dataset[0]
 
@@ -67,14 +65,27 @@ def test(model, data, loss_function):
 
 
 def draw_feature(emb, label, color):
+    fig_dim = emb.shape[1]
     fig = plt.figure(figsize=(8, 8))
     plt.subplots_adjust(right=0.85)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.scatter(emb[:, 0], emb[:, 1], c=color, cmap="Reds")
+    if fig_dim == 3:
+        ax = fig.add_subplot(1, 1, 1, projection="3d")
+        ax.scatter(emb[:, 0], emb[:, 1], emb[:, 2], c=color, cmap="Reds", edgecolor="r")
+    elif fig_dim == 2:
+        ax = fig.add_subplot(1, 1, 1)
+        ax.scatter(emb[:, 0], emb[:, 1], c=color, cmap="Reds")
+    else:
+        raise ValueError
+
     for label, pos in zip(label, emb):
         if label == "渋谷":
+            # グラフ上から渋谷を探すために座標を表示
             print(pos)
-        ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
+        if fig_dim == 3:
+            ax.text(x=pos[0], y=pos[1], z=pos[2], s=label, fontsize=9)
+        elif fig_dim == 2:
+            ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
+
     plt.show()
 
 
