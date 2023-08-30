@@ -8,3 +8,4 @@ sample*
 scripts/visualiz/*
 *.gif
 *.zip
+!distance_matrix_release.csv
