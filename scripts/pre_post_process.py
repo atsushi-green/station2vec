@@ -6,13 +6,14 @@ import numpy as np
 import pandas as pd
 from LandData import LandData
 from MeshPopulation import MeshPopulation
+from PathSetting import PathSetting
 
 FONTNAME = "IPAexGothic"
 plt.rcParams["font.family"] = FONTNAME
 
 
 # 前処理
-def make_station_dataframe(ps) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def make_station_dataframe(ps: PathSetting) -> Tuple[pd.DataFrame, pd.DataFrame]:
     filenames = ps.get_land_data_filenames()
     land = LandData(filenames)
     population = MeshPopulation(ps.get_population_filepaths(), ps.get_population_mesh_filepath())
@@ -54,6 +55,14 @@ def standrize(df: pd.DataFrame, col_names: List[str]) -> pd.DataFrame:
     return df
 
 
+def save_features(ps: PathSetting, emb: np.ndarray, station_names: List[str]):
+    df = pd.DataFrame(emb, columns=[f"{i:02d}" for i in range(emb.shape[1])])
+    # 駅ごとに縦にベクトルを並べるために転置
+    df = df.T
+    df.columns = station_names
+    df.to_csv(ps.get_station_vectors_filepath(), index=False, float_format="%.3f")
+
+
 # 後処理(保存など)
 def draw_feature(emb, label, color):
     fig_dim = emb.shape[1]
@@ -66,7 +75,8 @@ def draw_feature(emb, label, color):
         ax = fig.add_subplot(1, 1, 1)
         ax.scatter(emb[:, 0], emb[:, 1], c=color, cmap="jet")
     else:
-        raise ValueError
+        # 1次元以下、4次元以上は描画しない
+        return
 
     for label, pos in zip(label, emb):
         if label == "渋谷":

@@ -2,13 +2,13 @@ from typing import final
 
 import torch
 from PathSetting import PathSetting
-from pre_post_process import draw_feature, make_station_dataframe
+from pre_post_process import draw_feature, make_station_dataframe, save_features
 from StationData import StationData
 from torch_geometric.nn import VGAE
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
-EMBEDDING_DIM: final = 3
+EMBEDDING_DIM: final = 2
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VGAE(
         VariationalGraohAutoEncoder(
-            in_channels=dataset.input_feature_dim, hidden_channels_list=[4], out_channels=EMBEDDING_DIM
+            in_channels=dataset.input_feature_dim, hidden_channels_list=[4, 4, 4], out_channels=EMBEDDING_DIM
         )
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
@@ -38,6 +38,7 @@ def main():
     print(out[:10])
     station_df.to_csv("station.csv")
 
+    save_features(ps, out.detach().cpu().numpy(), station_df["駅名"].values)
     draw_feature(out.detach().cpu().numpy(), station_df["駅名"].values, station_df["地価"].values)
 
 
