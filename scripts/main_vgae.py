@@ -1,38 +1,44 @@
-import matplotlib.pyplot as plt
+from typing import final
+
 import torch
-from LandData import LandData
 from PathSetting import PathSetting
-from preprocess import make_station_dataframe
+from pre_post_process import draw_feature, make_station_dataframe, save_features
 from StationData import StationData
 from torch_geometric.nn import VGAE
+from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
-FONTNAME = "IPAexGothic"
-plt.rcParams["font.family"] = FONTNAME
+EMBEDDING_DIM: final = 2
 
 
 def main():
     ps = PathSetting()
-    land = LandData(ps.get_land_data_filenames())
-    station_df, edge_df = make_station_dataframe(ps)
-
     # データ読み込み
-    dataset = StationData(station_df, edge_df, land, standrize=False)
+    station_df, edge_df = make_station_dataframe(ps)
+    dataset = StationData(station_df, edge_df, standrize=False)
     dataset.print_graph_info()
     data = dataset[0]
 
+    # モデル定義
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = VGAE(VariationalGraohAutoEncoder(in_channels=3, hidden_channels_list=[4], out_channels=3)).to(device)
+    model = VGAE(
+        VariationalGraohAutoEncoder(
+            in_channels=dataset.input_feature_dim, hidden_channels_list=[4, 4, 4], out_channels=EMBEDDING_DIM
+        )
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    for epoch in range(1, 1001):
+
+    # 学習
+    for _ in tqdm(range(1, 1001)):
         train(model, optimizer, data)
     model.eval()
-    mu, std = model(data.x, data.edge_index)
+
     out = model.encode(data.x, data.edge_index)
 
-    print(mu[:10])
     print(out[:10])
     station_df.to_csv("station.csv")
+
+    save_features(ps, out.detach().cpu().numpy(), station_df["駅名"].values)
     draw_feature(out.detach().cpu().numpy(), station_df["駅名"].values, station_df["地価"].values)
 
 
@@ -55,26 +61,6 @@ def test(model, data, loss_function):
         loss = loss_function(out[mask], data.y[mask])
         losses.append(loss)
     return losses
-
-
-def draw_feature(emb, label, color):
-    fig = plt.figure(figsize=(8, 8))
-    plt.subplots_adjust(right=0.85)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.scatter(emb[:, 0], emb[:, 1], c=color, cmap="Reds")
-    for label, pos in zip(label, emb):
-        if label == "渋谷":
-            print(pos)
-        ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
-    plt.show()
-
-
-def standrize(df):
-    df["経度"] = (df["経度"] - df["経度"].mean()) / df["経度"].std()
-    df["緯度"] = (df["緯度"] - df["緯度"].mean()) / df["緯度"].std()
-    df["乗降者数"] = (df["乗降者数"] - df["乗降者数"].mean()) / df["乗降者数"].std()
-    df["地価"] = (df["地価"] - df["地価"].mean()) / df["地価"].std()
-    return df
 
 
 if __name__ == "__main__":
