@@ -7,7 +7,7 @@ class PathSetting:
         self.debug = debug  # 最小のデータ数で実行確認モード
         self.dir_home = Path.cwd().parent  # scriptsの親ディレクトリ
         self.dir_raw_data = self.dir_home / "data"
-        # self.dir_dataset = self.dir_home / "dataset"
+        self.dir_population_data = self.dir_raw_data / "population"
 
     def get_land_data_filenames(self) -> List[Path]:
         if self.debug:
@@ -22,3 +22,9 @@ class PathSetting:
     def get_edge_data_filepath(self, company: str) -> Path:
         # ../data/hankyu.csv などを返す。
         return self.dir_raw_data / f"{company}_edge.csv"
+
+    def get_population_filepaths(self) -> List[Path]:
+        return list(self.dir_population_data.glob("**/2021/11/monthly_mdp_mesh1km.csv"))
+
+    def get_population_mesh_filepath(self) -> Path:
+        return self.dir_population_data / "attribute/attribute_mesh1km_2020.csv"

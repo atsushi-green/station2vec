@@ -18,7 +18,7 @@ class StationData(InMemoryDataset):
         station_df["次数"] = [station_counter[station] for station in station_df["駅名"].values]
 
         # 乗降者数、地価、次数を特徴量として利用する
-        input_data = station_df[["乗降者数", "地価", "急行", "次数"]].values
+        input_data = station_df[["乗降者数", "地価", "急行", "次数", "昼人口", "深夜人口", "昼夜人口差"]].values
         # input_data = station_df[["乗降者数", "地価"]].values
         self.input_feature_dim = input_data.shape[1]
 
