@@ -1,40 +1,56 @@
+from typing import List, Tuple
+
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from LandData import LandData
+from MeshPopulation import MeshPopulation
 
 FONTNAME = "IPAexGothic"
 plt.rcParams["font.family"] = FONTNAME
 
 
 # 前処理
-def make_station_dataframe(ps):
+def make_station_dataframe(ps) -> Tuple[pd.DataFrame, pd.DataFrame]:
     filenames = ps.get_land_data_filenames()
     land = LandData(filenames)
+    population = MeshPopulation(ps.get_population_filepaths(), ps.get_population_mesh_filepath())
 
     # 阪急
-    hankyu_station_df = pd.read_csv(ps.get_station_data_filepath("hankyu"))  # 87駅
-    hankyu_station_df["社局"] = ["阪急"] * len(hankyu_station_df)
-    hankyu_station_df["地価"] = [land.get_price(station_name) for station_name in hankyu_station_df["駅名"].values]
-    hankyu_edge_df = pd.read_csv(ps.get_edge_data_filepath("hankyu"))
+    # 阪急87駅、東急89駅
+    node_df_list, edge_df_list = [], []
+    for company in ["hankyu", "tokyu"]:
+        # 駅データ
+        company_df = pd.read_csv(ps.get_station_data_filepath(company))
+        company_df["社局"] = [company] * len(company_df)
+        # 地価データ
+        company_df["地価"] = [land.get_price(station_name) for station_name in company_df["駅名"].values]
+        # エッジデータ
+        company_edge_df = pd.read_csv(ps.get_edge_data_filepath(company))
+        # 昼夜人口
+        noon_population_list, night_population_list = [], []
+        for lon, lat in zip(company_df["経度"].values, company_df["緯度"].values):
+            mesh_id = population.search_mesh_id(lon, lat)
+            noon_population_list.append(population.get_noon_population(mesh_id))
+            night_population_list.append(population.get_night_population(mesh_id))
+        company_df["昼人口"] = noon_population_list
+        company_df["深夜人口"] = night_population_list
+        company_df["昼夜人口差"] = np.array(noon_population_list) - np.array(night_population_list)
+        # 乗降者数と地価は社局それぞれで標準化
+        company_df = standrize(company_df, ["乗降者数", "地価", "昼人口", "深夜人口", "昼夜人口差"])
+        node_df_list.append(company_df)
+        edge_df_list.append(company_edge_df)
 
-    # 東急
-    tokyu_station_df = pd.read_csv(ps.get_station_data_filepath("tokyu"))  # 89駅
-    tokyu_station_df["社局"] = ["東急"] * len(tokyu_station_df)
-    tokyu_station_df["地価"] = [land.get_price(station_name) for station_name in tokyu_station_df["駅名"].values]
-    tokyu_edge_df = pd.read_csv(ps.get_edge_data_filepath("tokyu"))
+    station_df = pd.concat(node_df_list)
+    edge_df = pd.concat(edge_df_list)
 
-    hankyu_station_df = standrize(hankyu_station_df)
-    tokyu_station_df = standrize(tokyu_station_df)
-    station_df = pd.concat([hankyu_station_df, tokyu_station_df])
-    edge_df = pd.concat([hankyu_edge_df, tokyu_edge_df])
     return station_df, edge_df
 
 
-def standrize(df):
-    df["経度"] = (df["経度"] - df["経度"].mean()) / df["経度"].std()
-    df["緯度"] = (df["緯度"] - df["緯度"].mean()) / df["緯度"].std()
-    df["乗降者数"] = (df["乗降者数"] - df["乗降者数"].mean()) / df["乗降者数"].std()
-    df["地価"] = (df["地価"] - df["地価"].mean()) / df["地価"].std()
+def standrize(df: pd.DataFrame, col_names: List[str]) -> pd.DataFrame:
+    for col_name in col_names:
+        df[col_name] = (df[col_name] - df[col_name].mean()) / df[col_name].std()
     return df
 
 
@@ -66,8 +82,6 @@ def draw_feature(emb, label, color):
 
 
 def save_rotate_movie(fig, ax):
-    import matplotlib.animation as animation
-
     def animate(i):
         if i < 360:
             # 方位角を変える
