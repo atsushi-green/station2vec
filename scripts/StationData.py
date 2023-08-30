@@ -9,7 +9,7 @@ from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.transforms import NormalizeFeatures
 
 # 与えるノード特徴量
-USE_FEATURES = ["乗降者数", "地価", "急行", "次数", "昼人口", "深夜人口", "昼夜人口差"]
+USE_FEATURES = ["地価", "急行", "次数", "昼人口", "深夜人口", "昼夜人口差"]
 
 
 class StationData(InMemoryDataset):

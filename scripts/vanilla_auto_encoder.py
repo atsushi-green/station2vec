@@ -9,7 +9,7 @@ from StationData import StationData
 
 FONTNAME = "IPAexGothic"
 plt.rcParams["font.family"] = FONTNAME
-HIDDIN_DIM_LIST: final = [20, 20, 20]
+HIDDIN_DIM_LIST: final = [10, 10, 10]
 WEIGHT_DECAY: final = 5e-4
 LR: final = 0.001
 DROP_OUT: final = 0.1
