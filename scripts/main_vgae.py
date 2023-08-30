@@ -1,27 +1,25 @@
 from typing import final
 
-import matplotlib.pyplot as plt
 import torch
 from PathSetting import PathSetting
-from preprocess import make_station_dataframe
+from pre_post_process import draw_feature, make_station_dataframe
 from StationData import StationData
 from torch_geometric.nn import VGAE
+from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
-FONTNAME = "IPAexGothic"
-plt.rcParams["font.family"] = FONTNAME
-EMBEDDING_DIM: final = 2
+EMBEDDING_DIM: final = 3
 
 
 def main():
     ps = PathSetting()
-    station_df, edge_df = make_station_dataframe(ps)
-
     # データ読み込み
+    station_df, edge_df = make_station_dataframe(ps)
     dataset = StationData(station_df, edge_df, standrize=False)
     dataset.print_graph_info()
     data = dataset[0]
 
+    # モデル定義
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VGAE(
         VariationalGraohAutoEncoder(
@@ -29,14 +27,14 @@ def main():
         )
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    for epoch in range(1, 1001):
+
+    # 学習
+    for _ in tqdm(range(1, 1001)):
         train(model, optimizer, data)
     model.eval()
-    mu, std = model(data.x, data.edge_index)
 
     out = model.encode(data.x, data.edge_index)
 
-    print(mu[:10])
     print(out[:10])
     station_df.to_csv("station.csv")
 
@@ -62,31 +60,6 @@ def test(model, data, loss_function):
         loss = loss_function(out[mask], data.y[mask])
         losses.append(loss)
     return losses
-
-
-def draw_feature(emb, label, color):
-    fig_dim = emb.shape[1]
-    fig = plt.figure(figsize=(8, 8))
-    plt.subplots_adjust(right=0.85)
-    if fig_dim == 3:
-        ax = fig.add_subplot(1, 1, 1, projection="3d")
-        ax.scatter(emb[:, 0], emb[:, 1], emb[:, 2], c=color, cmap="Reds", edgecolor="r")
-    elif fig_dim == 2:
-        ax = fig.add_subplot(1, 1, 1)
-        ax.scatter(emb[:, 0], emb[:, 1], c=color, cmap="Reds")
-    else:
-        raise ValueError
-
-    for label, pos in zip(label, emb):
-        if label == "渋谷":
-            # グラフ上から渋谷を探すために座標を表示
-            print(pos)
-        if fig_dim == 3:
-            ax.text(x=pos[0], y=pos[1], z=pos[2], s=label, fontsize=9)
-        elif fig_dim == 2:
-            ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
-
-    plt.show()
 
 
 if __name__ == "__main__":
