@@ -1,37 +1,6 @@
 const k = 5 + 1;  //近い駅探す件数
 const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/distance_matrix_release.csv"
 
-var targetStation = ""
-var element = document.getElementById('targetStation');
-
-function butotnClick() {
-    // ボタンが押下された時に、近しい駅を表示する
-    targetStation = nameText.value
-    msg.innerText = targetStation + "に近い駅は";
-    msg2.innerText = "です。";
-    var index = station2index[targetStation];
-
-    var SmallestIndexes = getSmallestIndexes(distanceMatrix[index], k)
-    var nearStations = "<ol>"
-    for (let i = 1; i < k; i++) {
-        nearStations = nearStations + "<li>" + stations[SmallestIndexes[i]] + "</li>"
-    }
-    nearStations = nearStations + "</ol>"
-    // msg.innerText = nearStations
-    document.getElementById('a').innerHTML = nearStations;
-
-}
-
-
-let nameText = document.getElementById('targetStation');
-let msg = document.getElementById('msg');
-
-let checkButton = document.getElementById('searchButton');
-checkButton.addEventListener('click', butotnClick);
-
-
-
-
 function read_distance_matrix(url) {
     // CSVファイルを取得
     let csv = new XMLHttpRequest();
@@ -63,7 +32,40 @@ function read_distance_matrix(url) {
 
 let distanceMatrix_csv = read_distance_matrix(CSV_URL)
 
-eMatrix = distanceMatrix_csv.slice(1)  //ヘッダーを除く
+let distanceMatrix = distanceMatrix_csv.slice(1)  //ヘッダーを除く
+
+var targetStation = ""
+var element = document.getElementById('targetStation');
+
+function butotnClick() {
+    // ボタンが押下された時に、近しい駅を表示する
+    targetStation = nameText.value
+    msg.innerText = targetStation + "に近い駅は";
+    msg2.innerText = "です。";
+    var index = station2index[targetStation];
+
+    var SmallestIndexes = getSmallestIndexes(distanceMatrix[index], k)
+    var nearStations = "<ol>"
+    for (let i = 1; i < k; i++) {
+        nearStations = nearStations + "<li>" + stations[SmallestIndexes[i]] + "</li>"
+    }
+    nearStations = nearStations + "</ol>"
+    // msg.innerText = nearStations
+    document.getElementById('a').innerHTML = nearStations;
+
+}
+
+
+let nameText = document.getElementById('targetStation');
+let msg = document.getElementById('msg');
+
+let checkButton = document.getElementById('searchButton');
+checkButton.addEventListener('click', butotnClick);
+
+
+
+
+
 
 // 駅名からインデックスへの連想配列を作る
 var station2index = new Object();
