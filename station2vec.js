@@ -1,5 +1,9 @@
-const k = 5 + 1;  //近い駅探す件数
+const k = 5 + 1;  //近い駅探す件数（5件欲しいが、同一駅の距離が0で最小なので、+1件多く取得する）
 const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/distance_matrix_release.csv"
+var targetStation = ""  // この駅に近い駅を探す
+var stationText = document.getElementById('targetStation');  // テキストボックスオブジェクト
+let msg = document.getElementById('msg');  // "{targetStation}に近い駅は" の文字列
+
 
 function read_distance_matrix(url) {
     // CSVファイルを取得
@@ -30,17 +34,23 @@ function read_distance_matrix(url) {
     return csvArray
 }
 
-let distanceMatrix_csv = read_distance_matrix(CSV_URL)
 
-let distanceMatrix = distanceMatrix_csv.slice(1)  //ヘッダーを除く
+// 駅間のユークリッド距離をGitHub上のcsvファイルから読み込み
+let distanceMatrix_csv = read_distance_matrix(CSV_URL);
+let stations = distanceMatrix_csv[0];  //先頭行(ヘッダー)が駅名
+let distanceMatrix = distanceMatrix_csv.slice(1);  //ヘッダーを除くと距離行列
 
-var targetStation = ""
-var element = document.getElementById('targetStation');
+
+// 駅名からインデックスへの連想配列を作る
+var station2index = new Object();
+for (let i = 0; i < stations.length; i++) {
+    station2index[stations[i]] = i;
+}
 
 function butotnClick() {
     // ボタンが押下された時に、近しい駅を表示する
-    targetStation = nameText.value
-    msg.innerText = targetStation + "に近い駅は";
+    targetStation = stationText.value
+    msg.innerText = targetStation + " に近い駅は";
     msg2.innerText = "です。";
     var index = station2index[targetStation];
 
@@ -51,27 +61,8 @@ function butotnClick() {
     }
     nearStations = nearStations + "</ol>"
     // msg.innerText = nearStations
-    document.getElementById('a').innerHTML = nearStations;
+    document.getElementById('near_station').innerHTML = nearStations;
 
-}
-
-
-let nameText = document.getElementById('targetStation');
-let msg = document.getElementById('msg');
-
-let checkButton = document.getElementById('searchButton');
-checkButton.addEventListener('click', butotnClick);
-
-
-
-
-
-
-// 駅名からインデックスへの連想配列を作る
-var station2index = new Object();
-let stations = distanceMatrix_csv[0]
-for (let i = 0; i < stations.length; i++) {
-    station2index[stations[i]] = i;
 }
 
 function getSmallestIndexes(arr, k) {
@@ -98,3 +89,8 @@ function getSmallestIndexes(arr, k) {
 
     return indexes;
 }
+
+
+// ボタン押下の取得
+let checkButton = document.getElementById('searchButton');
+checkButton.addEventListener('click', butotnClick);

@@ -8,7 +8,8 @@ from torch_geometric.nn import VGAE
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
-EMBEDDING_DIM: final = 2
+EMBEDDING_DIM: final = 10
+HIDDIN_DIM_LIST: final = [10, 10, 10]
 
 
 def main():
@@ -23,7 +24,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VGAE(
         VariationalGraohAutoEncoder(
-            in_channels=dataset.input_feature_dim, hidden_channels_list=[4, 4, 4], out_channels=EMBEDDING_DIM
+            in_channels=dataset.input_feature_dim, hidden_channels_list=HIDDIN_DIM_LIST, out_channels=EMBEDDING_DIM
         )
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
