@@ -10,6 +10,7 @@ from torch_geometric.transforms import NormalizeFeatures
 
 # 与えるノード特徴量
 USE_FEATURES = ["地価", "急行", "次数", "昼人口", "深夜人口", "昼夜人口差"]
+# TODO: 土日と平日で分ける
 
 
 class StationData(InMemoryDataset):

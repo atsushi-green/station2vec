@@ -7,7 +7,7 @@ from PathSetting import PathSetting
 
 def main():
     ps = PathSetting()
-    vector = stationVector(ps.get_station_vectors_filepath("good"))
+    vector = stationVector(ps.get_station_vectors_filepath(""))
     k = int(input("上位何件の駅を表示しますか？:"))
     while True:
         station_name = input('駅名を入力してください。終了するには"exit"と入力してください:')
