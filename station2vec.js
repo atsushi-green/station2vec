@@ -50,8 +50,17 @@ for (let i = 0; i < stations.length; i++) {
 function butotnClick() {
     // ボタンが押下された時に、近しい駅を表示する
     targetStation = stationText.value
-    msg.innerText = targetStation + " に近い駅は";
-    msg2.innerText = "です。";
+    if (stations.includes(targetStation)) {
+
+        msg.innerText = targetStation + " に近い駅は";
+        msg2.innerText = "です。";
+    } else {
+        msg.innerText = targetStation + " は今回のデータには含まれていません。";
+        msg2.innerText = "\n";
+        document.getElementById('near_station').innerHTML = "";
+
+        return
+    }
     var index = station2index[targetStation];
 
     var SmallestIndexes = getSmallestIndexes(distanceMatrix[index], k)
@@ -62,6 +71,7 @@ function butotnClick() {
     nearStations = nearStations + "</ol>"
     // msg.innerText = nearStations
     document.getElementById('near_station').innerHTML = nearStations;
+    return
 
 }
 
