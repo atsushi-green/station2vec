@@ -9,8 +9,12 @@ from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.transforms import NormalizeFeatures
 
 # 与えるノード特徴量
-USE_FEATURES = ["地価", "急行", "次数", "昼人口", "深夜人口", "昼夜人口差"]
-# TODO: 土日と平日で分ける
+USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "平日昼夜人口差", "急行"]
+USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "休日昼人口", "平日昼夜人口差", "急行"]
+# SQUARED_INDEXES = [0, 1, 2, 3, 4]
+SQUARED_INDEXES = [0, 1, 2, 3, 4, 5]
+
+CROSS_ENTROPY_INDEXES = [6]
 
 
 class StationData(InMemoryDataset):
@@ -108,9 +112,6 @@ class StationData(InMemoryDataset):
                     hop_matrix[i, j] = -1
         edge_list.extend([i, i] for i in range(len(station2id)))  # 自己ループを追加
         edge_attr.extend([[0, 0]] * len(station2id))  # 自己ループを追加
-
-        print(distance_matrix)
-        print(hop_matrix)
 
         return edge_list, edge_attr
 

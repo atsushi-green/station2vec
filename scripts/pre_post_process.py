@@ -30,16 +30,29 @@ def make_station_dataframe(ps: PathSetting) -> Tuple[pd.DataFrame, pd.DataFrame]
         # エッジデータ
         company_edge_df = pd.read_csv(ps.get_edge_data_filepath(company))
         # 昼夜人口
-        noon_population_list, night_population_list = [], []
+        weekday_noon_population_list, weekday_night_population_list = [], []
+        holiday_noon_population_list, holiday_night_population_list = [], []
         for lon, lat in zip(company_df["経度"].values, company_df["緯度"].values):
             mesh_id = population.search_mesh_id(lon, lat)
-            noon_population_list.append(population.get_noon_population(mesh_id))
-            night_population_list.append(population.get_night_population(mesh_id))
-        company_df["昼人口"] = noon_population_list
-        company_df["深夜人口"] = night_population_list
-        company_df["昼夜人口差"] = np.array(noon_population_list) - np.array(night_population_list)
+            weekday_noon_population_list.append(population.get_population(mesh_id, "noon", "weekday"))
+            weekday_night_population_list.append(population.get_population(mesh_id, "night", "weekday"))
+            holiday_noon_population_list.append(population.get_population(mesh_id, "noon", "holiday"))
+            holiday_night_population_list.append(population.get_population(mesh_id, "night", "holiday"))
+
+        company_df["平日昼人口"] = weekday_noon_population_list
+        company_df["平日深夜人口"] = weekday_night_population_list
+        company_df["休日昼人口"] = weekday_noon_population_list
+        company_df["休日深夜人口"] = weekday_night_population_list
+        company_df["平日昼夜人口差"] = np.array(weekday_noon_population_list) - np.array(weekday_night_population_list)
+        company_df["休日昼夜人口差"] = np.array(holiday_noon_population_list) - np.array(holiday_night_population_list)
+        company_df["平日休日昼人口差"] = np.array(weekday_noon_population_list) - np.array(holiday_noon_population_list)
+        company_df["平日休日深夜人口差"] = np.array(weekday_night_population_list) - np.array(holiday_night_population_list)
+
         # 乗降者数と地価は社局それぞれで標準化
-        company_df = standrize(company_df, ["乗降者数", "地価", "昼人口", "深夜人口", "昼夜人口差"])
+        company_df = standrize(
+            company_df,
+            ["乗降者数", "地価", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "休日昼夜人口差", "平日休日昼人口差", "平日休日深夜人口差"],
+        )
         node_df_list.append(company_df)
         edge_df_list.append(company_edge_df)
 

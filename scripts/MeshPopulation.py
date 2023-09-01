@@ -21,7 +21,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-DAY_FLAG = 1  # 平日
+HOLIDAY_FLG = 0  # 休日
+WEEKDAY_FLAG = 1  # 平日
 TIME_ZONE_NOON = 0  # 昼
 TIME_ZONE_NIGHT = 1  # 深夜
 
@@ -36,11 +37,19 @@ class MeshPopulation:
             df_list.append(df)
         population_df = pd.concat(df_list)
 
-        # 平日のみ抽出
-        population_df = population_df[population_df["dayflag"] == DAY_FLAG]
+        # 平日休日それぞれ抽出
+        weekday_population_df = population_df[population_df["dayflag"] == WEEKDAY_FLAG]
+        holiday_population_df = population_df[population_df["dayflag"] == HOLIDAY_FLG]
+
         # 昼と深夜をそれぞれ抽出
-        self.noon_population_df = population_df[population_df["timezone"] == TIME_ZONE_NOON]
-        self.night_population_df = population_df[population_df["timezone"] == TIME_ZONE_NIGHT]
+        # 平日昼
+        self.weekday_noon_population_df = weekday_population_df[weekday_population_df["timezone"] == TIME_ZONE_NOON]
+        # 平日深夜
+        self.weekday_night_population_df = weekday_population_df[weekday_population_df["timezone"] == TIME_ZONE_NIGHT]
+        # 休日昼
+        self.holiday_noon_population_df = holiday_population_df[holiday_population_df["timezone"] == TIME_ZONE_NOON]
+        # 休日深夜
+        self.holiday_night_population_df = holiday_population_df[holiday_population_df["timezone"] == TIME_ZONE_NIGHT]
 
         # 全国のメッシュ情報を読み込む
         self.mesh_df = pd.read_csv(mesh_filepath, dtype={"mesh1kmid": str})
@@ -62,27 +71,28 @@ class MeshPopulation:
         # メッシュIDを返す
         return self.mesh_df.iloc[min_idx]["mesh1kmid"]
 
-    def get_noon_population(self, mesh_id: str) -> float:
-        """与えられたメッシュID地点の昼の人口を返す
+    def get_population(self, mesh_id: str, noon_night: str, weekday_holiday: str) -> float:
+        """与えられたメッシュID地点の昼深夜・平日休日の人口を返す
 
         Args:
             mesh_id (str): 全国のメッシュID
+            noon_night (str): "noon" or "night"
+            weekday_holiday (str): "weekday" or "holiday"
+
+        Raises:
+            Exception: _description_
 
         Returns:
-            float: 昼人口
+            float: 条件に合致する人口
         """
-        # メッシュIDから人口を返す
-        return self.noon_population_df.loc[mesh_id]["population"]
-
-    def get_night_population(self, mesh_id: str) -> float:
-        """与えられたメッシュID地点の深夜の人口を返す
-
-        Args:
-            mesh_id (str): 全国のメッシュID
-
-        Returns:
-            float: 深夜人口
-        """
-
-        # メッシュIDから人口を返す
-        return self.night_population_df.loc[mesh_id]["population"]
+        if noon_night == "noon":
+            if weekday_holiday == "weekday":
+                return self.weekday_noon_population_df.loc[mesh_id]["population"]
+            elif weekday_holiday == "holiday":
+                return self.holiday_noon_population_df.loc[mesh_id]["population"]
+        else:
+            if weekday_holiday == "weekday":
+                return self.weekday_night_population_df.loc[mesh_id]["population"]
+            elif weekday_holiday == "holiday":
+                return self.holiday_night_population_df.loc[mesh_id]["population"]
+        raise Exception("invalid argument")

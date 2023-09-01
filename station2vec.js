@@ -46,13 +46,22 @@ var station2index = new Object();
 for (let i = 0; i < stations.length; i++) {
     station2index[stations[i]] = i;
 }
-
+function sanitize_string(string) {
+    // 入力テキストのサニタイズ処理
+    string = string.replace(/</g, "&lt;");
+    string = string.replace(/>/g, "&gt;");
+    string = string.replace(/"/g, "&quot;");
+    string = string.replace(/'/g, "&#39;");
+    string = string.replace(/&/g, "&amp;");
+    return string;
+}
 function butotnClick() {
     // ボタンが押下された時に、近しい駅を表示する
     targetStation = stationText.value
+    targetStation = sanitize_string(targetStation)
     if (stations.includes(targetStation)) {
 
-        msg.innerText = targetStation + " に近い駅は";
+        msg.innerText = targetStation + " に似ている駅は";
         msg2.innerText = "です。";
     } else {
         msg.innerText = targetStation + " は今回のデータには含まれていません。";
@@ -69,7 +78,6 @@ function butotnClick() {
         nearStations = nearStations + "<li>" + stations[SmallestIndexes[i]] + "</li>"
     }
     nearStations = nearStations + "</ol>"
-    // msg.innerText = nearStations
     document.getElementById('near_station').innerHTML = nearStations;
     return
 
@@ -104,3 +112,4 @@ function getSmallestIndexes(arr, k) {
 // ボタン押下の取得
 let checkButton = document.getElementById('searchButton');
 checkButton.addEventListener('click', butotnClick);
+butotnClick();  // 初期表示
