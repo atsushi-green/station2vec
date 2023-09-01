@@ -9,8 +9,7 @@ from torch_geometric.nn import VGAE
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
 
-EMBEDDING_DIM: final = 10
-HIDDIN_DIM_LIST: final = [10, 10, 10]
+HIDDIN_DIM_LIST: final = [20, 15, 10]
 
 
 def main():
