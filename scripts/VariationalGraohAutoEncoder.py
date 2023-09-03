@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import torch
 from torch import nn
-from torch_geometric.nn import GATConv, GCNConv, SAGEConv
+from torch_geometric.nn import GCNConv, SAGEConv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -15,14 +15,15 @@ class VariationalGraohAutoEncoder(torch.nn.Module):
     def __init__(self, in_channels: int, hidden_channels_list: List[int], out_channels: int):
         super().__init__()
         # self.conv1 = GCNConv(in_channels, hidden_channels_list[0])
-        self.conv1 = GATConv(in_channels, hidden_channels_list[0])
+        self.conv1 = SAGEConv(in_channels, hidden_channels_list[0])
 
         # self.conv_list = [
         #     GCNConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         # ]
         self.conv_list = [
-            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
+        # 最終層だけGCNConvで隣接ノードを全て使う
         self.conv_mu = GCNConv(hidden_channels_list[-1], out_channels)
         self.conv_logstd = GCNConv(hidden_channels_list[-1], out_channels)
 
@@ -41,10 +42,11 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         # self.conv_list = [
         #     GCNConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         # ]
-        self.conv1 = GATConv(embedding_channels, hidden_channels_list[0])
+        self.conv1 = SAGEConv(embedding_channels, hidden_channels_list[0])
         self.conv_list = [
-            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
+        # 最終層だけGCNConvで隣接ノードを全て使う
         self.conv_final = GCNConv(hidden_channels_list[-1], out_channels)
 
     def forward(self, z: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
