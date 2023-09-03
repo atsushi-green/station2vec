@@ -7,15 +7,38 @@ from StationData import CROSS_ENTROPY_INDEXES, SQUARED_INDEXES, StationData
 from torch import nn
 from torch_geometric.nn import VGAE
 from tqdm import tqdm
-from VariationalGraohAutoEncoder import VariationalGraohAutoEncoder
+from VariationalGraohAutoEncoder import VariationalGraohAutoDecoder, VariationalGraohAutoEncoder
 
-HIDDIN_DIM_LIST: final = [20, 15, 10]
+EMBEDDING_DIM = 5
+HIDDIN_DIM_LIST: final = [10, 10, 10, 10, 10, 10, 10, 10]
+
+
+bce_loss_func = nn.BCELoss()
+
+
+def loss_function(y: torch.Tensor, target: torch.Tensor, model: VGAE) -> torch.Tensor:
+    # 二乗誤差(この後クロスエントロピー誤差を加えるので、meanではなくsumを利用しておく)
+    sum_loss = torch.sum((y[:, SQUARED_INDEXES] - target[:, SQUARED_INDEXES]) ** 2)
+
+    # クロスエントロピー誤差を加える
+    y[:, CROSS_ENTROPY_INDEXES] = torch.clamp(y[:, CROSS_ENTROPY_INDEXES], min=1e-7, max=1 - 1e-7)
+    for ce_index in CROSS_ENTROPY_INDEXES:
+        sum_loss += bce_loss_func(y[:, ce_index], target[:, ce_index])
+    # 平均化して、サイズに依存しないようにして、オートエンコーダーとしての損失を確定させる
+    recon_loss = sum_loss / target.shape[0]
+
+    # 負のKLダイバージェンス（VGAEがすでに負のKLを実装してくれている）
+    kl_loss = (1 / target.shape[0]) * model.kl_loss()
+
+    return recon_loss + kl_loss
 
 
 def main():
     ps = PathSetting()
     # データ読み込み
     station_df, edge_df = make_station_dataframe(ps)
+    station_df.to_csv("station.csv")  # 今回のデータを保存
+
     dataset = StationData(station_df, edge_df, standrize=False)
     dataset.print_graph_info()
     data = dataset[0]
@@ -26,39 +49,36 @@ def main():
         VariationalGraohAutoEncoder(
             in_channels=dataset.input_feature_dim,
             hidden_channels_list=HIDDIN_DIM_LIST,
-            out_channels=dataset.input_feature_dim,
-        )
+            out_channels=EMBEDDING_DIM,
+        ),
+        VariationalGraohAutoDecoder(EMBEDDING_DIM, HIDDIN_DIM_LIST[::-1], dataset.input_feature_dim),
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     # 学習
-    for _ in tqdm(range(1, 1001)):
-        train(model, optimizer, data)
+    for epoch in tqdm(range(1, 100001)):
+        loss = train(model, optimizer, data)
+        if epoch % 100 == 0:
+            # train_loss, val_loss, test_loss = test(model, data, loss_function)
+            tqdm.write(f"epoch:{epoch}, loss:{loss:.4f}")
+
+    # 学習した埋め込み表現の保存
     model.eval()
-
     out = model.encode(data.x, data.edge_index)
-
-    station_df.to_csv("station.csv")
 
     save_features(ps, out.detach().cpu().numpy(), station_df["駅名"].values)
     draw_feature(out.detach().cpu().numpy(), station_df["駅名"].values, station_df["地価"].values)
-
-
-def loss_function(z: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-    loss = nn.CrossEntropyLoss()
-    squared_loss = torch.mean((z[SQUARED_INDEXES] - x[SQUARED_INDEXES]) ** 2)
-    cross_entropy_loss = loss(z[CROSS_ENTROPY_INDEXES], x[CROSS_ENTROPY_INDEXES])
-    return squared_loss + cross_entropy_loss
 
 
 def train(model, optimizer, train_data):
     model.train()
     optimizer.zero_grad()
     z = model.encode(train_data.x, train_data.edge_index)
-    # 元論文ではエッジ予測誤差(recon_loss)を損失としているが、今回はノード特徴量の再構成誤差を損失とする
+    y = model.decode(z, train_data.edge_index)
+    # 元論文ではエッジ予測誤差(recon_loss)を損失としているが、
+    # 今回はノード特徴量の再構成誤差を損失としたいので、自前で用意する
     # loss = model.recon_loss(z, train_data.edge_index)
-    loss = loss_function(z, train_data.x)
-    loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
+    loss = loss_function(y, train_data.x, model)
     loss.backward()
     optimizer.step()
     return loss

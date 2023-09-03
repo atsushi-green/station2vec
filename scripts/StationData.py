@@ -9,12 +9,13 @@ from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.transforms import NormalizeFeatures
 
 # 与えるノード特徴量
-USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "平日昼夜人口差", "急行"]
-USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "休日昼人口", "平日昼夜人口差", "急行"]
+# USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "平日昼夜人口差", "急行"]
+USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "平日休日昼人口差", "急行"]
 # SQUARED_INDEXES = [0, 1, 2, 3, 4]
-SQUARED_INDEXES = [0, 1, 2, 3, 4, 5]
+SQUARED_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7]
 
-CROSS_ENTROPY_INDEXES = [6]
+CROSS_ENTROPY_INDEXES = [8]
+assert len(USE_FEATURES) == len(SQUARED_INDEXES) + len(CROSS_ENTROPY_INDEXES)
 
 
 class StationData(InMemoryDataset):
@@ -81,25 +82,26 @@ class StationData(InMemoryDataset):
             distance_matrix[station2id[b], station2id[a]] = distance
             edge_weight_list.append([station2id[a], station2id[b], distance])
 
+        # 各ノード間の（路線図上での）最短距離を計算する
         # 空の無向グラフを作成
         G = nx.Graph()
         node_list = list(station2id.values())  # 頂点のリスト
         # 重み付きの枝を加える
         G.add_nodes_from(node_list)  # 頂点の追加#単品可
         G.add_weighted_edges_from(edge_weight_list)  # 重み付き辺の追加
-
         dijkstra_dict = dict(nx.all_pairs_dijkstra(G))
+        # 確認
         # print(a[73][0])  # 73から各ノードへの最短距離
         # print(a[73][1])  # 73から各ノードへの最短経路
+
         edge_attr = []
         edge_list = []
-
         for i in range(len(station2id)):
             for j in range(len(station2id)):
                 try:
                     distance = dijkstra_dict[i][0][j]  # iを出発点としたときのjまでの距離(0番目の要素)
                     hop = len(dijkstra_dict[i][1][j]) - 1  # iを出発点としたときのjまでのホップ数(1番目の要素のリスト長-1)
-                    if hop > 2:
+                    if hop > 5:
                         # 遠すぎるやつは繋がない
                         continue
                     distance_matrix[i, j] = distance
@@ -111,7 +113,7 @@ class StationData(InMemoryDataset):
                     distance_matrix[i, j] = -1
                     hop_matrix[i, j] = -1
         edge_list.extend([i, i] for i in range(len(station2id)))  # 自己ループを追加
-        edge_attr.extend([[0, 0]] * len(station2id))  # 自己ループを追加
+        edge_attr.extend([[0, 0]] * len(station2id))  # 自己ループを追加（距離、hop共に0）
 
         return edge_list, edge_attr
 
