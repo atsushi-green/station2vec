@@ -1,5 +1,8 @@
 # https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_0.html
+# で公開されているjsonデータの前処理。主に公示地価を取得するために使う。
 import json
+from pathlib import Path
+from typing import Any, List, Union
 
 import numpy as np
 
@@ -14,7 +17,7 @@ FEATURES = "features"
 
 
 class LandData:
-    def __init__(self, filenames) -> None:
+    def __init__(self, filenames: List[Union[Path, str]]) -> None:
         self.price_list = []
         self.distance_list = []
         self.station_list = []
@@ -25,7 +28,24 @@ class LandData:
         # インデックス参照しやすいようにnumpy配列にしておく
         self.price_list = np.array(self.price_list, dtype=np.float32)
 
-    def read_geojson(self, filename):
+    def read_geojson(self, filename: Union[Path, str]) -> None:
+        """公示地価、駅までの距離、近い駅名を読み込む。jsonは以下の形式
+        {
+            "type": "Feature",
+            "properties": {
+                "L01_001": "000",
+                "L01_002": "002",
+                （中略）
+                "L01_044": "中層のマンション、事務所等が混在する住宅地域",
+                "L01_045": "永田町",
+            },
+        }
+
+        Args:
+            filename (Union[Path, str]): jsonファイルパス
+        """
+        # TODO: そのエリアの特性（L01_044）を使いたい
+
         with open(filename, "r") as f:
             data = list(json.load(f)[FEATURES])
             price_list = [data[i]["properties"][PRICE] for i in range(len(data))]
@@ -36,7 +56,16 @@ class LandData:
         self.station_list.extend(station_list)
 
     def get_price(self, station_name: str) -> float:
-        def findall_index(_list, search_value):
+        """駅名から公示地価を取得する。複数ある場合は平均値を返す。
+
+        Args:
+            station_name (str): 駅名
+
+        Returns:
+            float: 公示価格
+        """
+
+        def findall_index(_list: list, search_value: Any):
             return [i for i, x in enumerate(_list) if x == search_value]
 
         station_name = self.convert_near_station(station_name)
@@ -48,7 +77,7 @@ class LandData:
     def convert_near_station(self, station_name: str) -> str:
         """国土数値情報の最寄り駅に存在しないとき、近くにある駅に変換する
         https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_0.html
-        9割以上は国土数値情報を検索すれば駅名文字列が完全に一致するが、一致しないものを手動で登録している。
+        ほとんどの駅は国土数値情報を検索すれば駅名文字列が完全に一致するが、一致しないものを手動で登録している。
 
         Args:
             station_name (str): 探したい駅名
