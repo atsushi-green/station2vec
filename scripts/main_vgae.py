@@ -1,6 +1,7 @@
-from typing import final
+from typing import List
 
 import torch
+import torch_geometric
 from PathSetting import PathSetting
 from pre_post_process import draw_feature, make_station_dataframe, save_features
 from StationData import CROSS_ENTROPY_INDEXES, SQUARED_INDEXES, StationData
@@ -9,28 +10,11 @@ from torch_geometric.nn import VGAE
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoDecoder, VariationalGraohAutoEncoder
 
+NUM_EPOCH = 100000
 EMBEDDING_DIM = 5
-HIDDIN_DIM_LIST: final = [10, 10, 10, 10, 10, 10, 10, 10]
-
-
+HIDDIN_DIM_LIST: List[int] = [10, 10, 10, 10, 10, 10, 10, 10]
+INIT_LEARNING_RATE = 0.01
 bce_loss_func = nn.BCELoss()
-
-
-def loss_function(y: torch.Tensor, target: torch.Tensor, model: VGAE) -> torch.Tensor:
-    # 二乗誤差(この後クロスエントロピー誤差を加えるので、meanではなくsumを利用しておく)
-    sum_loss = torch.sum((y[:, SQUARED_INDEXES] - target[:, SQUARED_INDEXES]) ** 2)
-
-    # クロスエントロピー誤差を加える
-    y[:, CROSS_ENTROPY_INDEXES] = torch.clamp(y[:, CROSS_ENTROPY_INDEXES], min=1e-7, max=1 - 1e-7)
-    for ce_index in CROSS_ENTROPY_INDEXES:
-        sum_loss += bce_loss_func(y[:, ce_index], target[:, ce_index])
-    # 平均化して、サイズに依存しないようにして、オートエンコーダーとしての損失を確定させる
-    recon_loss = sum_loss / target.shape[0]
-
-    # 負のKLダイバージェンス（VGAEがすでに負のKLを実装してくれている）
-    kl_loss = (1 / target.shape[0]) * model.kl_loss()
-
-    return recon_loss + kl_loss
 
 
 def main():
@@ -53,13 +37,13 @@ def main():
         ),
         VariationalGraohAutoDecoder(EMBEDDING_DIM, HIDDIN_DIM_LIST[::-1], dataset.input_feature_dim),
     ).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=INIT_LEARNING_RATE)
 
     # 学習
-    for epoch in tqdm(range(1, 100001)):
+    for epoch in tqdm(range(1, NUM_EPOCH + 1)):
         loss = train(model, optimizer, data)
         if epoch % 100 == 0:
-            # train_loss, val_loss, test_loss = test(model, data, loss_function)
+            # train_loss, val_loss, test_loss = test(model, data)
             tqdm.write(f"epoch:{epoch}, loss:{loss:.4f}")
 
     # 学習した埋め込み表現の保存
@@ -70,9 +54,20 @@ def main():
     draw_feature(out.detach().cpu().numpy(), station_df["駅名"].values, station_df["地価"].values)
 
 
-def train(model, optimizer, train_data):
+def train(model: VGAE, optimizer: torch.optim, train_data: torch_geometric.data.data.Data) -> torch.Tensor:
+    """モデルによる出力を得て、損失を計算し、パラメータを更新する。
+
+    Args:
+        model (VGAE): モデル
+        optimizer (torch.optim): オプティマイザー(Adam)
+        train_data (torch_geometric.data.data.Data): 学習データセット
+
+    Returns:
+        torch.Tensor: 誤差
+    """
     model.train()
     optimizer.zero_grad()
+    # エンコード->デコードにより、モデルの出力を得る
     z = model.encode(train_data.x, train_data.edge_index)
     y = model.decode(z, train_data.edge_index)
     # 元論文ではエッジ予測誤差(recon_loss)を損失としているが、
@@ -84,7 +79,8 @@ def train(model, optimizer, train_data):
     return loss
 
 
-def test(model, data, loss_function):
+def test(model: VGAE, data: torch_geometric.data.data.Data) -> List[torch.Tensor]:
+    # TBD: この関数は未完成
     model.eval()
     out = model(data.x, data.edge_index)
     losses = []
@@ -92,6 +88,35 @@ def test(model, data, loss_function):
         loss = loss_function(out[mask], data.y[mask])
         losses.append(loss)
     return losses
+
+
+def loss_function(y: torch.Tensor, target: torch.Tensor, model: VGAE) -> torch.Tensor:
+    """二乗誤差を計算する箇所(SQUARED_INDEXES)は二乗誤差を、
+    クロスエントロピー誤差を計算する箇所(CROSS_ENTROPY_INDEXES)はクロスエントロピー誤差を計算する。
+    これらの誤差に、負のKLダイバージェンスを加えて、VAEの損失を計算する。
+
+    Args:
+        y (torch.Tensor): モデルの出力
+        target (torch.Tensor): 正解データ
+        model (VGAE): モデル
+
+    Returns:
+        torch.Tensor: 誤差
+    """
+    # 二乗誤差(この後クロスエントロピー誤差を加えるので、meanではなくsumを利用しておく)
+    sum_loss = torch.sum((y[:, SQUARED_INDEXES] - target[:, SQUARED_INDEXES]) ** 2)
+
+    # クロスエントロピー誤差を加える
+    y[:, CROSS_ENTROPY_INDEXES] = torch.clamp(y[:, CROSS_ENTROPY_INDEXES], min=1e-7, max=1 - 1e-7)
+    for ce_index in CROSS_ENTROPY_INDEXES:
+        sum_loss += bce_loss_func(y[:, ce_index], target[:, ce_index])
+    # 平均化して、サイズに依存しないようにして、オートエンコーダーとしての損失を確定させる
+    recon_loss = sum_loss / target.shape[0]
+
+    # 負のKLダイバージェンス（VGAEがすでに負のKLを実装してくれている）
+    kl_loss = (1 / target.shape[0]) * model.kl_loss()
+
+    return recon_loss + kl_loss
 
 
 if __name__ == "__main__":
