@@ -1,12 +1,11 @@
 from typing import List, Tuple
 
 import torch
+from StationData import CROSS_ENTROPY_INDEXES
 from torch import nn
 from torch_geometric.nn import GCNConv, SAGEConv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-from StationData import CROSS_ENTROPY_INDEXES
 
 
 # ショートカットコネクションを入れたほうがいいかもしれないが、オートエンコーダーの性質上、
@@ -14,12 +13,7 @@ from StationData import CROSS_ENTROPY_INDEXES
 class VariationalGraohAutoEncoder(torch.nn.Module):
     def __init__(self, in_channels: int, hidden_channels_list: List[int], out_channels: int):
         super().__init__()
-        # self.conv1 = GCNConv(in_channels, hidden_channels_list[0])
         self.conv1 = SAGEConv(in_channels, hidden_channels_list[0])
-
-        # self.conv_list = [
-        #     GCNConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
-        # ]
         self.conv_list = [
             SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
@@ -38,10 +32,6 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
     def __init__(self, embedding_channels: int, hidden_channels_list: List[int], out_channels: int):
         super().__init__()
         self.sigmoid = nn.Sigmoid()
-        # self.conv1 = GCNConv(embedding_channels, hidden_channels_list[0])
-        # self.conv_list = [
-        #     GCNConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
-        # ]
         self.conv1 = SAGEConv(embedding_channels, hidden_channels_list[0])
         self.conv_list = [
             SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
@@ -49,7 +39,7 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         # 最終層だけGCNConvで隣接ノードを全て使う
         self.conv_final = GCNConv(hidden_channels_list[-1], out_channels)
 
-    def forward(self, z: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, z: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         x = self.conv1(z, edge_index).relu()
         for conv in self.conv_list:
             x = conv(x, edge_index).relu()
