@@ -1,11 +1,12 @@
 const k = 5 + 1;  //近い駅探す件数（5件欲しいが、同一駅の距離が0で最小なので、+1件多く取得する）
-const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/distance_matrix_release.csv"
+const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/cos_similarity.csv"
+
 var targetStation = ""  // この駅に近い駅を探す
 var stationText = document.getElementById('targetStation');  // テキストボックスオブジェクト
 let msg = document.getElementById('msg');  // "{targetStation}に近い駅は" の文字列
 
 
-function read_distance_matrix(url) {
+function read_cos_similarity_matrix(url) {
     // CSVファイルを取得
     let csv = new XMLHttpRequest();
     // CSVファイルへのパス
@@ -35,10 +36,10 @@ function read_distance_matrix(url) {
 }
 
 
-// 駅間のユークリッド距離をGitHub上のcsvファイルから読み込み
-let distanceMatrix_csv = read_distance_matrix(CSV_URL);
-let stations = distanceMatrix_csv[0];  //先頭行(ヘッダー)が駅名
-let distanceMatrix = distanceMatrix_csv.slice(1);  //ヘッダーを除くと距離行列
+// 駅間のcos類似度をGitHub上のcsvファイルから読み込み
+let cos_similarity_matrix_csv = read_cos_similarity_matrix(CSV_URL);
+let stations = cos_similarity_matrix_csv[0];  //先頭行(ヘッダー)が駅名
+let similarityMatrix = cos_similarity_matrix_csv.slice(1);  //ヘッダーを除くと距離行列
 
 
 // 駅名からインデックスへの連想配列を作る
@@ -61,7 +62,7 @@ function butotnClick() {
     targetStation = sanitize_string(targetStation)
     if (stations.includes(targetStation)) {
 
-        msg.innerText = targetStation + " に似ている駅は";
+        msg.innerText = targetStation + " に似ている駅と似ていない駅は";
         msg2.innerText = "です。";
     } else {
         msg.innerText = targetStation + " は今回のデータには含まれていません。";
@@ -72,15 +73,17 @@ function butotnClick() {
     }
     var index = station2index[targetStation];
 
-    var SmallestIndexes = getSmallestIndexes(distanceMatrix[index], k)
-    var nearStations = "<ol>"
-    for (let i = 1; i < k; i++) {
-        nearStations = nearStations + "<li>" + stations[SmallestIndexes[i]] + "</li>"
-    }
-    nearStations = nearStations + "</ol>"
-    document.getElementById('near_station').innerHTML = nearStations;
-    return
+    var SmallestIndexes = getSmallestIndexes(similarityMatrix[index], k)
+    var BiggestIndexes = getbiggestIndexes(similarityMatrix[index], k)
+    var nearStationsTable = "<table border=\"1\"><tr><th>似ている駅</th><th>似ていない駅</th></tr>";
 
+
+    for (let i = 1; i < k; i++) {
+        nearStationsTable = nearStationsTable + "<tr><td>" + stations[BiggestIndexes[i]] + "</td><td>" + stations[SmallestIndexes[i]] + "</td></tr>"
+    }
+    nearStationsTable = nearStationsTable + "</table>"
+    document.getElementById('near_station').innerHTML = nearStationsTable;
+    return
 }
 
 function getSmallestIndexes(arr, k) {
@@ -88,7 +91,7 @@ function getSmallestIndexes(arr, k) {
     const indexes = [];
 
     for (let i = 0; i < k; i++) {
-        let minValue = Infinity;
+        let minValue = 2;  // cos類似度を見るので、最大値は1。最小値は2で初期化
         let minIndex = -1;
 
         for (let j = 0; j < arr.length; j++) {
@@ -108,6 +111,30 @@ function getSmallestIndexes(arr, k) {
     return indexes;
 }
 
+function getbiggestIndexes(arr, k) {
+    // 上位k件の最大値を持つ要素のインデックスを返す
+    const indexes = [];
+
+    for (let i = 0; i < k; i++) {
+        let maxValue = -2;  // cos類似度を見るので、最小値は-11。最大値は-12で初期化
+        let maxIndex = -1;
+
+        for (let j = 0; j < arr.length; j++) {
+            if (indexes.includes(j)) {
+                continue; // Skip if index already selected
+            }
+
+            if (arr[j] > maxValue) {
+                maxValue = arr[j];
+                maxIndex = j;
+            }
+        }
+
+        indexes.push(maxIndex);
+    }
+
+    return indexes;
+}
 
 // ボタン押下の取得
 let checkButton = document.getElementById('searchButton');
