@@ -7,6 +7,7 @@ from pre_post_process import draw_feature, make_station_dataframe, save_features
 from StationData import CROSS_ENTROPY_INDEXES, SQUARED_INDEXES, StationData
 from torch import nn
 from torch_geometric.nn import VGAE
+from torch_geometric.utils import negative_sampling
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoDecoder, VariationalGraohAutoEncoder
 
@@ -14,6 +15,7 @@ NUM_EPOCH = 100000
 EMBEDDING_DIM = 5
 HIDDIN_DIM_LIST: List[int] = [10, 10, 10, 10, 10, 10, 10, 10]
 INIT_LEARNING_RATE = 0.01
+EPS = 1e-15
 bce_loss_func = nn.BCELoss()
 
 
@@ -73,7 +75,7 @@ def train(model: VGAE, optimizer: torch.optim, train_data: torch_geometric.data.
     # 元論文ではエッジ予測誤差(recon_loss)を損失としているが、
     # 今回はノード特徴量の再構成誤差を損失としたいので、自前で用意する
     # loss = model.recon_loss(z, train_data.edge_index)
-    loss = loss_function(y, train_data.x, model)
+    loss = loss_function(y, train_data.x, train_data.edge_index, z, model)
     loss.backward()
     optimizer.step()
     return loss
@@ -90,14 +92,20 @@ def test(model: VGAE, data: torch_geometric.data.data.Data) -> List[torch.Tensor
     return losses
 
 
-def loss_function(y: torch.Tensor, target: torch.Tensor, model: VGAE) -> torch.Tensor:
-    """二乗誤差を計算する箇所(SQUARED_INDEXES)は二乗誤差を、
+def loss_function(
+    y: torch.Tensor, target: torch.Tensor, pos_edge_index: torch.Tensor, z: torch.Tensor, model: VGAE
+) -> torch.Tensor:
+    """再構成二乗誤差 + 負のKLダイバージェンス+エッジ予測誤差 + エッジ予測誤差を計算する。
+    二乗誤差を計算する箇所(SQUARED_INDEXES)は二乗誤差を、
     クロスエントロピー誤差を計算する箇所(CROSS_ENTROPY_INDEXES)はクロスエントロピー誤差を計算する。
-    これらの誤差に、負のKLダイバージェンスを加えて、VAEの損失を計算する。
+    これらの誤差に、負のKLダイバージェンスを計算し、
+    さらに、エッジ予測の誤差を加えてVAEの損失を計算する。
 
     Args:
-        y (torch.Tensor): モデルの出力
-        target (torch.Tensor): 正解データ
+        y (torch.Tensor): モデルの出力(入力特徴量の再構成)
+        target (torch.Tensor): 正解データ(入力特徴量)
+        pos_edge_index (torch.Tensor): 繋がっているエッジのインデックス
+        z (torch.Tensor): エンコードされたノード特徴量
         model (VGAE): モデル
 
     Returns:
@@ -116,7 +124,13 @@ def loss_function(y: torch.Tensor, target: torch.Tensor, model: VGAE) -> torch.T
     # 負のKLダイバージェンス（VGAEがすでに負のKLを実装してくれている）
     kl_loss = (1 / target.shape[0]) * model.kl_loss()
 
-    return recon_loss + kl_loss
+    # エッジ予測としての誤差
+    pos_loss = -torch.log(model.decoder.edge_pred_forward(z[pos_edge_index[0]], z[pos_edge_index[1]]) + +EPS).mean()
+    neg_edge_index = negative_sampling(pos_edge_index, z.size(0))
+    neg_loss = -torch.log(1 - model.decoder.edge_pred_forward(z[neg_edge_index[0]], z[neg_edge_index[1]]) + EPS).mean()
+    edge_pred_loss = pos_loss + neg_loss
+
+    return recon_loss + kl_loss + edge_pred_loss
 
 
 if __name__ == "__main__":
