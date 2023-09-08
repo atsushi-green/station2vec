@@ -11,9 +11,9 @@ from torch_geometric.utils import negative_sampling
 from tqdm import tqdm
 from VariationalGraohAutoEncoder import VariationalGraohAutoDecoder, VariationalGraohAutoEncoder
 
-NUM_EPOCH = 100000
+NUM_EPOCH = 10000
 EMBEDDING_DIM = 5
-HIDDIN_DIM_LIST: List[int] = [10, 10, 10, 10, 10, 10, 10, 10]
+HIDDIN_DIM_LIST: List[int] = [20, 20, 15, 10]
 INIT_LEARNING_RATE = 0.01
 EPS = 1e-15
 bce_loss_func = nn.BCELoss()
@@ -130,7 +130,9 @@ def loss_function(
     neg_loss = -torch.log(1 - model.decoder.edge_pred_forward(z[neg_edge_index[0]], z[neg_edge_index[1]]) + EPS).mean()
     edge_pred_loss = pos_loss + neg_loss
 
-    return recon_loss + kl_loss + edge_pred_loss
+    return recon_loss + kl_loss
+
+    # return recon_loss + kl_loss + edge_pred_loss
 
 
 if __name__ == "__main__":
