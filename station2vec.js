@@ -1,5 +1,5 @@
 const k = 5 + 1;  //近い駅探す件数（5件欲しいが、同一駅の距離が0で最小なので、+1件多く取得する）
-const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/cos_similarity.csv"
+const CSV_URL = "https://raw.githubusercontent.com/atsushi-green/station2vec/main/scripts/cos_similarity_release.csv"
 
 var targetStation = ""  // この駅に近い駅を探す
 var stationText = document.getElementById('targetStation');  // テキストボックスオブジェクト
