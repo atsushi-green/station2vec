@@ -9,3 +9,4 @@ scripts/visualiz/*
 *.gif
 *.zip
 !distance_matrix_release.csv
+!cos_similarity_release.csv

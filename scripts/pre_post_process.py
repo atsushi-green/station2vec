@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ plt.rcParams["font.family"] = FONTNAME
 
 
 # 前処理
-def make_station_dataframe(ps: PathSetting) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def make_station_dataframe(ps: PathSetting, standrize: Optional[bool] = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
     filenames = ps.get_land_data_filenames()
     land = LandData(filenames)
     population = MeshPopulation(ps.get_population_filepaths(), ps.get_population_mesh_filepath())
@@ -41,18 +41,19 @@ def make_station_dataframe(ps: PathSetting) -> Tuple[pd.DataFrame, pd.DataFrame]
 
         company_df["平日昼人口"] = weekday_noon_population_list
         company_df["平日深夜人口"] = weekday_night_population_list
-        company_df["休日昼人口"] = weekday_noon_population_list
-        company_df["休日深夜人口"] = weekday_night_population_list
+        company_df["休日昼人口"] = holiday_noon_population_list
+        company_df["休日深夜人口"] = holiday_night_population_list
         company_df["平日昼夜人口差"] = np.array(weekday_noon_population_list) - np.array(weekday_night_population_list)
         company_df["休日昼夜人口差"] = np.array(holiday_noon_population_list) - np.array(holiday_night_population_list)
         company_df["平日休日昼人口差"] = np.array(weekday_noon_population_list) - np.array(holiday_noon_population_list)
         company_df["平日休日深夜人口差"] = np.array(weekday_night_population_list) - np.array(holiday_night_population_list)
 
         # 乗降者数と地価は社局それぞれで標準化
-        company_df = standrize(
-            company_df,
-            ["乗降者数", "地価", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "休日昼夜人口差", "平日休日昼人口差", "平日休日深夜人口差"],
-        )
+        if standrize:
+            company_df = standrize_df(
+                company_df,
+                ["乗降者数", "地価", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "休日昼夜人口差", "平日休日昼人口差", "平日休日深夜人口差"],
+            )
         node_df_list.append(company_df)
         edge_df_list.append(company_edge_df)
 
@@ -62,7 +63,7 @@ def make_station_dataframe(ps: PathSetting) -> Tuple[pd.DataFrame, pd.DataFrame]
     return station_df, edge_df
 
 
-def standrize(df: pd.DataFrame, col_names: List[str]) -> pd.DataFrame:
+def standrize_df(df: pd.DataFrame, col_names: List[str]) -> pd.DataFrame:
     for col_name in col_names:
         df[col_name] = (df[col_name] - df[col_name].mean()) / df[col_name].std()
     return df
