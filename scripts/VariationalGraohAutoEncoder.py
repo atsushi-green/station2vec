@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 from StationData import CROSS_ENTROPY_INDEXES
@@ -13,15 +13,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class VariationalGraohAutoEncoder(torch.nn.Module):
-    def __init__(self, in_channels: int, hidden_channels_list: List[int], out_channels: int):
+    def __init__(
+        self, in_channels: int, hidden_channels_list: List[int], out_channels: int, dropout_rate: Optional[float] = 0.25
+    ):
         super().__init__()
+        self.dropout = nn.Dropout(dropout_rate)
         self.conv1 = SAGEConv(in_channels, hidden_channels_list[0])
         self.conv_list = [
             SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
-            nn.Linear(in_channels, hidden_channels_list[i]) for i in range(len(hidden_channels_list) - 1)
+            nn.Linear(in_channels, hidden_channels_list[i]) for i in range(1, len(hidden_channels_list))
         ]
 
         # 最終層だけGCNConvで隣接ノードを全て使う
@@ -40,8 +43,15 @@ class VariationalGraohAutoEncoder(torch.nn.Module):
 
 
 class VariationalGraohAutoDecoder(torch.nn.Module):
-    def __init__(self, embedding_channels: int, hidden_channels_list: List[int], out_channels: int):
+    def __init__(
+        self,
+        embedding_channels: int,
+        hidden_channels_list: List[int],
+        out_channels: int,
+        dropout_rate: Optional[float] = 0.25,
+    ):
         super().__init__()
+        self.dropout = nn.Dropout(dropout_rate)
         self.sigmoid = nn.Sigmoid()
         # 自己符号化器としてのデコーダー
         self.conv1 = SAGEConv(embedding_channels, hidden_channels_list[0])
@@ -51,7 +61,7 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
             nn.Linear(embedding_channels, hidden_channels)
-            for hidden_channels in (hidden_channels_list + [out_channels])
+            for hidden_channels in (hidden_channels_list[1:] + [out_channels])
         ]
         # 最終層だけGCNConvで隣接ノードを全て使う
         self.conv_final = GCNConv(hidden_channels_list[-1], out_channels)
@@ -73,6 +83,7 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         for conv, res in zip(self.conv_list, self.initial_residual_list):
             # graph conv
             h = conv(h, edge_index).relu()
+            h = self.dropout(h)
             # initial residual
             z_ = res(z)
             h = h + z_
@@ -98,5 +109,6 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         h = torch.cat([z1, z2], dim=1)
         for linear in self.edge_predict_linear:
             h = linear(h).relu()
+            h = self.dropout(h)
         h = self.edge_predict_final(h)
         return self.sigmoid(h)
