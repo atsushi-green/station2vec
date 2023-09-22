@@ -11,6 +11,6 @@ Variational Graph Auto-Encoders (https://arxiv.org/abs/1611.07308) を元に、
 - 「駅データ」（駅データ.jp）（https://ekidata.jp/）
 - 「国土数値情報（地価公示データ）」（国土交通省）（https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_0.html）
 
-# 近しい駅の検索サービス
+# 似ている駅の検索サービス
 https://atsushi-green.github.io/station2vec/
 

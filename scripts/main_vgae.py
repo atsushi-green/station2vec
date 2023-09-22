@@ -125,7 +125,7 @@ def loss_function(
     kl_loss = (1 / target.shape[0]) * model.kl_loss()
 
     # エッジ予測としての誤差
-    pos_loss = -torch.log(model.decoder.edge_pred_forward(z[pos_edge_index[0]], z[pos_edge_index[1]]) + +EPS).mean()
+    pos_loss = -torch.log(model.decoder.edge_pred_forward(z[pos_edge_index[0]], z[pos_edge_index[1]]) + EPS).mean()
     neg_edge_index = negative_sampling(pos_edge_index, z.size(0))
     neg_loss = -torch.log(1 - model.decoder.edge_pred_forward(z[neg_edge_index[0]], z[neg_edge_index[1]]) + EPS).mean()
     edge_pred_loss = pos_loss + neg_loss
