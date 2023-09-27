@@ -130,9 +130,7 @@ def loss_function(
     neg_loss = -torch.log(1 - model.decoder.edge_pred_forward(z[neg_edge_index[0]], z[neg_edge_index[1]]) + EPS).mean()
     edge_pred_loss = pos_loss + neg_loss
 
-    return recon_loss + kl_loss
-
-    # return recon_loss + kl_loss + edge_pred_loss
+    return recon_loss + kl_loss + edge_pred_loss
 
 
 if __name__ == "__main__":
