@@ -3,13 +3,13 @@ from typing import List, Optional, Tuple
 import torch
 from StationData import CROSS_ENTROPY_INDEXES
 from torch import nn
-from torch_geometric.nn import GCNConv, SAGEConv
+from torch_geometric.nn import SAGEConv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Attentionも試したが、学習に時間がかかる上に、精度も悪かったので今回はSAGEConvを使うことにした。
 # SAGEConv epoch:100000, loss:2.9652
-# GATConv epoch:100000, loss:3.3080
+# SAGEConv epoch:100000, loss:3.3080
 
 
 class VariationalGraohAutoEncoder(torch.nn.Module):
@@ -27,9 +27,8 @@ class VariationalGraohAutoEncoder(torch.nn.Module):
             nn.Linear(in_channels, hidden_channels_list[i]) for i in range(1, len(hidden_channels_list))
         ]
 
-        # 最終層だけGCNConvで隣接ノードを全て使う
-        self.conv_mu = GCNConv(hidden_channels_list[-1], out_channels)
-        self.conv_logstd = GCNConv(hidden_channels_list[-1], out_channels)
+        self.conv_mu = SAGEConv(hidden_channels_list[-1], out_channels)
+        self.conv_logstd = SAGEConv(hidden_channels_list[-1], out_channels)
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         h = self.conv1(x, edge_index).relu()
@@ -63,8 +62,7 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
             nn.Linear(embedding_channels, hidden_channels)
             for hidden_channels in (hidden_channels_list[1:] + [out_channels])
         ]
-        # 最終層だけGCNConvで隣接ノードを全て使う
-        self.conv_final = GCNConv(hidden_channels_list[-1], out_channels)
+        self.conv_final = SAGEConv(hidden_channels_list[-1], out_channels)
 
         # エッジ予測としてのデコーダー
         # エッジ予測に InnerProductDecoder を使うと、ベクトルが似たノード同士でエッジができやすくなるので、
