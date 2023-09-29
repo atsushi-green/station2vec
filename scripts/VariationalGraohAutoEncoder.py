@@ -3,42 +3,50 @@ from typing import List, Optional, Tuple
 import torch
 from StationData import CROSS_ENTROPY_INDEXES
 from torch import nn
-from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import GATConv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Attentionも試したが、学習に時間がかかる上に、精度も悪かったので今回はSAGEConvを使うことにした。
-# SAGEConv epoch:100000, loss:2.9652
-# SAGEConv epoch:100000, loss:3.3080
+# Attentionも試したが、学習に時間がかかる上に、精度も悪かったので今回はGATConvを使うことにした。
+# GATConv epoch:100000, loss:2.9652
+# GATConv epoch:100000, loss:3.3080
 
 
 class VariationalGraohAutoEncoder(torch.nn.Module):
     def __init__(
-        self, in_channels: int, hidden_channels_list: List[int], out_channels: int, dropout_rate: Optional[float] = 0.25
+        self,
+        in_channels: int,
+        hidden_channels_list: List[int],
+        out_channels: int,
+        edge_attr: torch.Tensor,
+        dropout_rate: Optional[float] = 0.25,
     ):
         super().__init__()
         self.dropout = nn.Dropout(dropout_rate)
-        self.conv1 = SAGEConv(in_channels, hidden_channels_list[0])
+        self.edge_attr = edge_attr
+        self.conv1 = GATConv(in_channels, hidden_channels_list[0])
         self.conv_list = [
-            SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
             nn.Linear(in_channels, hidden_channels_list[i]) for i in range(1, len(hidden_channels_list))
         ]
 
-        self.conv_mu = SAGEConv(hidden_channels_list[-1], out_channels)
-        self.conv_logstd = SAGEConv(hidden_channels_list[-1], out_channels)
+        self.conv_mu = GATConv(hidden_channels_list[-1], out_channels)
+        self.conv_logstd = GATConv(hidden_channels_list[-1], out_channels)
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         h = self.conv1(x, edge_index).relu()
         for conv, res in zip(self.conv_list, self.initial_residual_list):
             # graph conv
-            h = conv(h, edge_index).relu()
+            h = conv(h, edge_index, edge_attr=self.edge_attr).relu()
             # initial residual
             x_ = res(x)
             h = h + x_
-        return self.conv_mu(h, edge_index), self.conv_logstd(h, edge_index)
+        return self.conv_mu(h, edge_index, edge_attr=self.edge_attr), self.conv_logstd(
+            h, edge_index, edge_attr=self.edge_attr
+        )
 
 
 class VariationalGraohAutoDecoder(torch.nn.Module):
@@ -47,22 +55,24 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         embedding_channels: int,
         hidden_channels_list: List[int],
         out_channels: int,
+        edge_attr: torch.Tensor,
         dropout_rate: Optional[float] = 0.25,
     ):
         super().__init__()
         self.dropout = nn.Dropout(dropout_rate)
+        self.edge_attr = edge_attr
         self.sigmoid = nn.Sigmoid()
         # 自己符号化器としてのデコーダー
-        self.conv1 = SAGEConv(embedding_channels, hidden_channels_list[0])
+        self.conv1 = GATConv(embedding_channels, hidden_channels_list[0])
         self.conv_list = [
-            SAGEConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
         ]
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
             nn.Linear(embedding_channels, hidden_channels)
             for hidden_channels in (hidden_channels_list[1:] + [out_channels])
         ]
-        self.conv_final = SAGEConv(hidden_channels_list[-1], out_channels)
+        self.conv_final = GATConv(hidden_channels_list[-1], out_channels)
 
         # エッジ予測としてのデコーダー
         # エッジ予測に InnerProductDecoder を使うと、ベクトルが似たノード同士でエッジができやすくなるので、
@@ -80,7 +90,7 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         h = self.conv1(z, edge_index).relu()
         for conv, res in zip(self.conv_list, self.initial_residual_list):
             # graph conv
-            h = conv(h, edge_index).relu()
+            h = conv(h, edge_index, edge_attr=self.edge_attr).relu()
             h = self.dropout(h)
             # initial residual
             z_ = res(z)
