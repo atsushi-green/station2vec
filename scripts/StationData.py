@@ -9,7 +9,7 @@ from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.transforms import NormalizeFeatures
 
 # 与えるノード特徴量
-USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "平日休日昼人口差", "急行"]
+USE_FEATURES = ["地価", "次数", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口比", "平日休日昼人口比", "急行"]
 SQUARED_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7]
 CROSS_ENTROPY_INDEXES = [8]
 assert len(USE_FEATURES) == len(SQUARED_INDEXES) + len(CROSS_ENTROPY_INDEXES)

@@ -43,16 +43,16 @@ def make_station_dataframe(ps: PathSetting, standrize: Optional[bool] = True) ->
         company_df["平日深夜人口"] = weekday_night_population_list
         company_df["休日昼人口"] = holiday_noon_population_list
         company_df["休日深夜人口"] = holiday_night_population_list
-        company_df["平日昼夜人口差"] = np.array(weekday_noon_population_list) - np.array(weekday_night_population_list)
-        company_df["休日昼夜人口差"] = np.array(holiday_noon_population_list) - np.array(holiday_night_population_list)
-        company_df["平日休日昼人口差"] = np.array(weekday_noon_population_list) - np.array(holiday_noon_population_list)
-        company_df["平日休日深夜人口差"] = np.array(weekday_night_population_list) - np.array(holiday_night_population_list)
+        company_df["平日昼夜人口比"] = np.array(weekday_noon_population_list) / np.array(weekday_night_population_list)
+        company_df["休日昼夜人口比"] = np.array(holiday_noon_population_list) / np.array(holiday_night_population_list)
+        company_df["平日休日昼人口比"] = np.array(weekday_noon_population_list) / np.array(holiday_noon_population_list)
+        company_df["平日休日深夜人口比"] = np.array(weekday_night_population_list) / np.array(holiday_night_population_list)
 
         # 乗降者数と地価は社局それぞれで標準化
         if standrize:
             company_df = standrize_df(
                 company_df,
-                ["乗降者数", "地価", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口差", "休日昼夜人口差", "平日休日昼人口差", "平日休日深夜人口差"],
+                ["乗降者数", "地価", "平日昼人口", "平日深夜人口", "休日昼人口", "休日深夜人口", "平日昼夜人口比", "休日昼夜人口比", "平日休日昼人口比", "平日休日深夜人口比"],
             )
         node_df_list.append(company_df)
         edge_df_list.append(company_edge_df)
@@ -80,8 +80,9 @@ def save_features(ps: PathSetting, emb: np.ndarray, station_names: List[str]):
 # 後処理(保存など)
 def draw_feature(emb, label, color):
     fig_dim = emb.shape[1]
-    fig = plt.figure(figsize=(8, 8))
-    plt.subplots_adjust(right=0.85)
+    fig = plt.figure(figsize=(6.5, 6.5))
+    plt.subplots_adjust(right=0.95, left=0.05, bottom=0.05, top=0.95)
+    # left=0, right=1, bottom=0, top=1
     if fig_dim == 3:
         ax = fig.add_subplot(1, 1, 1, projection="3d")
         ax.scatter(emb[:, 0], emb[:, 1], emb[:, 2], c=color, cmap="jet")
@@ -100,6 +101,9 @@ def draw_feature(emb, label, color):
             ax.text(x=pos[0], y=pos[1], z=pos[2], s=label, fontsize=9)
         elif fig_dim == 2:
             ax.text(x=pos[0], y=pos[1], s=label, fontsize=9)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_zticklabels([])
     if fig_dim == 3:
         save_rotate_movie(fig, ax)
     plt.show()
@@ -109,7 +113,7 @@ def save_rotate_movie(fig, ax):
     def animate(i):
         if i < 360:
             # 方位角を変える
-            ax.view_init(elev=30.0, azim=i)
+            ax.view_init(elev=30.0, azim=91 + i * 2)
         else:
             # 仰角を変える
             ax.view_init(elev=30.0 + i, azim=0)
@@ -119,5 +123,5 @@ def save_rotate_movie(fig, ax):
         ax.view_init(elev=30.0, azim=0)
         return (fig,)
 
-    ani = animation.FuncAnimation(fig, animate, init_func=init, frames=360 * 2, interval=50, blit=True)
-    ani.save("3d-scatter.gif", writer="imagemagick")
+    ani = animation.FuncAnimation(fig, animate, init_func=init, frames=40, interval=100, blit=True)
+    ani.save("3d-scatter.gif", writer="imagemagick", savefig_kwargs={"transparent": True})

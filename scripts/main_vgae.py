@@ -36,8 +36,11 @@ def main():
             in_channels=dataset.input_feature_dim,
             hidden_channels_list=HIDDIN_DIM_LIST,
             out_channels=EMBEDDING_DIM,
+            edge_attr=data.edge_attr,
         ),
-        VariationalGraohAutoDecoder(EMBEDDING_DIM, HIDDIN_DIM_LIST[::-1], dataset.input_feature_dim),
+        VariationalGraohAutoDecoder(
+            EMBEDDING_DIM, HIDDIN_DIM_LIST[::-1], dataset.input_feature_dim, edge_attr=data.edge_attr
+        ),
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=INIT_LEARNING_RATE)
 
