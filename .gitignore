@@ -10,3 +10,4 @@ scripts/visualiz/*
 *.zip
 !distance_matrix_release.csv
 !cos_similarity_release.csv
+!logo.png

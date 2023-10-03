@@ -1,4 +1,9 @@
 # station2vec
+
+<p align="center">
+  <img src="logo.png" />
+</p>
+
 駅の特徴をベクトルで表現する（station2vec）
 
 # model
