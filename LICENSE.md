@@ -1,24 +1,24 @@
-MIT License
+SOFTWARE LICENSE AGREEMENT
 
-Copyright (c) 2023 Atsushi
+1. License Grant
+The software contained in this package is licensed to you by Atsushi. This non-exclusive license allows you to use the software free of charge for personal, non-commercial purposes only.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+2. Restrictions
+You may NOT:
+   a. Use the software for commercial purposes.
+   b. Sell, rent, lease, or sublicense the software.
+   c. Distribute the software to others without written permission from Atsushi.
+   d. Modify, reverse engineer, decompile, or disassemble the software.
 
-Commercial use of this software is strictly prohibited. 
-You may not use the Software or any derivative works for commercial purposes.
+3. Termination
+This license is effective until terminated. Your rights under this license will terminate automatically without notice from Atsushi if you fail to comply with any term(s) of this license.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+4. Governing Law
+This agreement is governed by the laws of Japan.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+5. Entire Agreement
+This License constitutes the entire agreement between the parties with respect to the software licensed hereunder.
+
+By using the software, you agree to the terms of this license. If you do not agree to the terms of this license, do not install or use the software.
+
+© 2023 Atsushi. All rights reserved.
