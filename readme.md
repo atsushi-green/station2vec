@@ -7,7 +7,7 @@
 This tool provides an implementation of the VGAE (Variational Grph Autoencoder) for computing vector representations of stations.
 
 # model
-Based of [Variational Graph Auto-Encoders](https://arxiv.org/abs/1611.07308) minimize the loss function below:
+Based on [Variational Graph Auto-Encoders](https://arxiv.org/abs/1611.07308) minimize the loss function below:
 
 ```math
 loss = \mathbb{E} logp(X|Z) + \mathbb{E}[logp(A|Z)] - KL(q(Z|X, A)||p(Z))
