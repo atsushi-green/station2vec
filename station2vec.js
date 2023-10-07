@@ -62,8 +62,8 @@ function butotnClick() {
     targetStation = sanitize_string(targetStation)
     if (stations.includes(targetStation)) {
 
-        msg.innerText = targetStation + " に似ている駅と似ていない駅は";
-        msg2.innerText = "です。";
+        msg.innerText = targetStation + " に似ている駅と似ていない駅は以下の通りです。\n駅名の下にある数値は、" + targetStation + " とのcos類似度です (-1から1の値をとり、数値が大きいほど似ていることを表す)。";
+        msg2.innerText = "";
     } else {
         msg.innerText = targetStation + " は今回のデータには含まれていません。";
         msg2.innerText = "\n";
@@ -79,11 +79,13 @@ function butotnClick() {
 
 
     for (let i = 1; i < k; i++) {
-        nearStationsTable = nearStationsTable + "<tr><td>" + stations[BiggestIndexes[i]] + "</td><td>" + stations[SmallestIndexes[i]] + "</td></tr>"
+        nearStationsTable = nearStationsTable + "<tr><td>" + stations[BiggestIndexes[i]] + "<br>" + Number(similarityMatrix[index][BiggestIndexes[i]]).toFixed(3) + "</br>"
+            + "</td><td>" + stations[SmallestIndexes[i]] + "<br>" + Number(similarityMatrix[index][SmallestIndexes[i]]).toFixed(3) + "</br>" + "</td></tr>"
     }
-    nearStationsTable = nearStationsTable + "</table>"
+    nearStationsTable += "</table>";
     document.getElementById('near_station').innerHTML = nearStationsTable;
     return
+
 }
 
 function getSmallestIndexes(arr, k) {
@@ -91,7 +93,7 @@ function getSmallestIndexes(arr, k) {
     const indexes = [];
 
     for (let i = 0; i < k; i++) {
-        let minValue = 2;  // cos類似度を見るので、最大値は1。最小値は2で初期化
+        let minValue = 2;  // cos類似度を見るので、最大値は-2。最小値は2で初期化
         let minIndex = -1;
 
         for (let j = 0; j < arr.length; j++) {
@@ -99,7 +101,7 @@ function getSmallestIndexes(arr, k) {
                 continue; // Skip if index already selected
             }
 
-            if (arr[j] < minValue) {
+            if (Number(arr[j]) < Number(minValue)) {
                 minValue = arr[j];
                 minIndex = j;
             }
@@ -116,7 +118,7 @@ function getbiggestIndexes(arr, k) {
     const indexes = [];
 
     for (let i = 0; i < k; i++) {
-        let maxValue = -2;  // cos類似度を見るので、最小値は-11。最大値は-12で初期化
+        let maxValue = -2;  // cos類似度を見るので、最小値は-2。最大値は2で初期化
         let maxIndex = -1;
 
         for (let j = 0; j < arr.length; j++) {
