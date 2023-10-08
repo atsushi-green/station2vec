@@ -56,13 +56,15 @@ function sanitize_string(string) {
     string = string.replace(/&/g, "&amp;");
     return string;
 }
+
 function butotnClick() {
     // ボタンが押下された時に、近しい駅を表示する
     targetStation = stationText.value
     targetStation = sanitize_string(targetStation)
     if (stations.includes(targetStation)) {
 
-        msg.innerText = targetStation + " に似ている駅と似ていない駅は以下の通りです。\n駅名の下にある数値は、" + targetStation + " とのcos類似度です (-1から1の値をとり、数値が大きいほど似ていることを表す)。";
+        msg.innerText = targetStation + " に似ている駅・似ていない駅は以下の通りです。\n駅名の下にある数値は、" + targetStation
+            + " とのcos類似度です。\n cos類似度とは、2つの駅がどれくらい似ているかを示す指標で、1に近ければ近いほど似ており、-1に近ければ似ていないことを示します。";
         msg2.innerText = "";
     } else {
         msg.innerText = targetStation + " は今回のデータには含まれていません。";
