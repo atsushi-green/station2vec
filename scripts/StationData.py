@@ -15,6 +15,7 @@ CROSS_ENTROPY_INDEXES = [8]
 assert len(USE_FEATURES) == len(SQUARED_INDEXES) + len(CROSS_ENTROPY_INDEXES)
 
 MAX_CONNECT_HOP = 5  # このホップ数より離れた駅とは繋がらない（MAX_CONNECT_HOP ホップまではつなげる）
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class StationData(InMemoryDataset):
@@ -30,13 +31,13 @@ class StationData(InMemoryDataset):
         self.input_feature_dim = input_data.shape[1]
 
         input_data = (input_data - input_data.mean(axis=0)) / input_data.std(axis=0) if standrize else input_data
-        input_tensor = torch.tensor(input_data, dtype=torch.float)
+        input_tensor = torch.tensor(input_data, dtype=torch.float).to(device)
 
         self.station2id = {station: i for i, station in enumerate(station_df["駅名"].values)}
         edge_list, edge_attr = self.calc_graph_distance(station_df, edge_df, self.station2id)
 
-        self.edges = torch.tensor(edge_list, dtype=torch.int64).T
-        self.edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+        self.edges = torch.tensor(edge_list, dtype=torch.int64).T.to(device)
+        self.edge_attr = torch.tensor(edge_attr, dtype=torch.float).to(device)
         # y(正解データ)をinput_tensorにすることで、オートエンコーダーとして学習させる
         data = Data(
             x=input_tensor,
@@ -44,7 +45,7 @@ class StationData(InMemoryDataset):
             y=input_tensor,
             edge_attr=self.edge_attr,
             transform=NormalizeFeatures(),
-        )
+        ).to(device)
 
         self.data, self.slices = self.collate([data])
         self.train_mask, self.val_mask, self.test_mask = self.train_val_test_split(data)
