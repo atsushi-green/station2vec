@@ -26,15 +26,16 @@ class VariationalGraohAutoEncoder(torch.nn.Module):
         self.edge_attr = edge_attr
         self.conv1 = GATConv(in_channels, hidden_channels_list[0])
         self.conv_list = [
-            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]).to(device)
+            for i in range(len(hidden_channels_list) - 1)
         ]
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
-            nn.Linear(in_channels, hidden_channels_list[i]) for i in range(1, len(hidden_channels_list))
+            nn.Linear(in_channels, hidden_channels_list[i]).to(device) for i in range(1, len(hidden_channels_list))
         ]
 
-        self.conv_mu = GATConv(hidden_channels_list[-1], out_channels)
-        self.conv_logstd = GATConv(hidden_channels_list[-1], out_channels)
+        self.conv_mu = GATConv(hidden_channels_list[-1], out_channels).to(device)
+        self.conv_logstd = GATConv(hidden_channels_list[-1], out_channels).to(device)
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         h = self.conv1(x, edge_index).relu()
@@ -63,27 +64,28 @@ class VariationalGraohAutoDecoder(torch.nn.Module):
         self.edge_attr = edge_attr
         self.sigmoid = nn.Sigmoid()
         # 自己符号化器としてのデコーダー
-        self.conv1 = GATConv(embedding_channels, hidden_channels_list[0])
+        self.conv1 = GATConv(embedding_channels, hidden_channels_list[0]).to(device)
         self.conv_list = [
-            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]) for i in range(len(hidden_channels_list) - 1)
+            GATConv(hidden_channels_list[i], hidden_channels_list[i + 1]).to(device)
+            for i in range(len(hidden_channels_list) - 1)
         ]
         # initial residualするための形揃えるための線形層
         self.initial_residual_list = [
-            nn.Linear(embedding_channels, hidden_channels)
+            nn.Linear(embedding_channels, hidden_channels).to(device)
             for hidden_channels in (hidden_channels_list[1:] + [out_channels])
         ]
-        self.conv_final = GATConv(hidden_channels_list[-1], out_channels)
+        self.conv_final = GATConv(hidden_channels_list[-1], out_channels).to(device)
 
         # エッジ予測としてのデコーダー
         # エッジ予測に InnerProductDecoder を使うと、ベクトルが似たノード同士でエッジができやすくなるので、
         # エッジ予測はニューラルネットワークで行う。
-        first_layer = nn.Linear(embedding_channels * 2, hidden_channels_list[0])  # 2つのノードの埋め込みをconcatしている
+        first_layer = nn.Linear(embedding_channels * 2, hidden_channels_list[0]).to(device)  # 2つのノードの埋め込みをconcatしている
         mid_layer = [
-            nn.Linear(hidden_channels_list[i], hidden_channels_list[i + 1])
+            nn.Linear(hidden_channels_list[i], hidden_channels_list[i + 1]).to(device)
             for i in range(len(hidden_channels_list) - 1)
         ]
         self.edge_predict_linear = [first_layer] + mid_layer
-        self.edge_predict_final = nn.Linear(hidden_channels_list[-1], 1)
+        self.edge_predict_final = nn.Linear(hidden_channels_list[-1], 1).to(device)
 
     def forward(self, z: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         # 自己符号化器としてのデコーダー
