@@ -9,6 +9,7 @@ This repository provides an implementation of the VGAE (Variational Graph Autoen
 # model
 I modified the [Variational Graph Auto-Encoders](https://arxiv.org/abs/1611.07308) architecture to optimize the following loss function;
 
+
 ```math
 loss = \mathbb{E} logp(X|Z) + \mathbb{E}[logp(A|Z)] - KL(q(Z|X, A)||p(Z))
 ```
